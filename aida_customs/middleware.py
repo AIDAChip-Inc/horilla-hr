@@ -30,30 +30,10 @@ leaking a new HRMS surface.
 
 from django.http import Http404
 
-# Leading path segments of the non-recruitment HRMS feature apps. Each app
-# mounts its own routes under exactly this segment (its ``apps.py`` ready()).
-# recruitment/ is deliberately absent (kept); base's root "" is never blocked.
-BLOCKED_SEGMENTS = frozenset(
-    {
-        "payroll",
-        "leave",
-        "attendance",
-        "asset",
-        "pms",
-        "onboarding",
-        "offboarding",
-        "project",
-        "helpdesk",
-        "report",
-        "meet",        # horilla_meet
-        "backup",      # horilla_backup
-        "whatsapp",
-        "biometric",
-    }
-)
-
-# Maps an installed app label -> the URL segment it mounts under, for the
-# drift guard in the tests (app labels differ from their URL prefixes).
+# Maps each non-recruitment HRMS feature app (its INSTALLED_APPS label) to the
+# URL segment it self-mounts under in its ``apps.py`` ready(). recruitment is
+# deliberately absent (kept); base's root "" is never blocked. The drift guard
+# in the tests checks every installed member here is gated.
 FEATURE_APP_SEGMENTS = {
     "payroll": "payroll",
     "leave": "leave",
@@ -70,6 +50,9 @@ FEATURE_APP_SEGMENTS = {
     "whatsapp": "whatsapp",
     "biometric": "biometric",
 }
+
+# Leading path segments that are 404'd (single source of truth: the map above).
+BLOCKED_SEGMENTS = frozenset(FEATURE_APP_SEGMENTS.values())
 
 
 def _leading_segment(path: str) -> str:

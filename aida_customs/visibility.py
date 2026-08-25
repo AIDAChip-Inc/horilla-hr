@@ -86,9 +86,8 @@ def resolve_role_for_candidate(viewer, candidate) -> Role:
         return Role.NONE
     if _is_superuser(viewer) or _manages_recruitment(viewer, candidate.recruitment_id):
         return Role.MANAGER
-    if InterviewScorecard.objects.filter(  # is viewer an interviewer on any interview?
-        interview__candidate_id=candidate, interview__employee_id=viewer
-    ).exists() or candidate.candidate_interview.filter(employee_id=viewer).exists():
+    # Interviewer on any of this candidate's interviews.
+    if candidate.candidate_interview.filter(employee_id=viewer).exists():
         return Role.INTERVIEWER
     return Role.NONE
 
