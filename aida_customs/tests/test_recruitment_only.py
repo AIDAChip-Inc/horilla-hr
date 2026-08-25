@@ -35,6 +35,8 @@ class RouteGateTests(SimpleTestCase):
             "/pms/objective-list-view/",
             "/onboarding/onboarding-view/",
             "/leave/leave-dashboard/",
+            "/api/facedetection/",  # /api/-mounted HRMS helper, gated by prefix
+            "/api/geofencing/",
         ]:
             with self.subTest(path=path):
                 self.assertTrue(is_blocked(path), f"{path} must be gated")
@@ -68,18 +70,95 @@ class RouteGateTests(SimpleTestCase):
         # KILL-NOTE: block the "" segment -> root 404 -> RED (shell dead).
 
     def test_drift_guard_installed_hrms_apps_are_gated(self):
-        """Fail-closed witness: every installed non-recruitment HRMS feature app
-        maps to a blocked URL segment. An upstream-added feature app turns this
-        red instead of silently leaking a new HRMS surface."""
+        """Fail-closed witness over the ACTUAL installed set: every installed app
+        that is neither on the reachable allowlist nor gated is reported. A new
+        upstream app (HRMS or otherwise) that is installed but not classified
+        turns this red — unlike the old tautology which only iterated the gate's
+        own map and could never fail."""
         from django.conf import settings
 
-        installed = set(settings.INSTALLED_APPS)
-        for app, segment in middleware.FEATURE_APP_SEGMENTS.items():
-            if app in installed:
-                with self.subTest(app=app):
-                    self.assertIn(
-                        segment,
-                        middleware.BLOCKED_SEGMENTS,
-                        f"HRMS app '{app}' installed but segment '{segment}' not gated",
-                    )
-        # KILL-NOTE: drop "payroll" from BLOCKED_SEGMENTS -> RED.
+        ungated = _ungated_apps(settings.INSTALLED_APPS)
+        self.assertEqual(
+            ungated, [], f"installed apps neither allowlisted nor gated: {ungated}"
+        )
+        # KILL-NOTE: drop "payroll" from FEATURE_APP_SEGMENTS -> payroll is
+        # installed, not allowlisted, no longer gated -> reported -> RED.
+
+    def test_drift_guard_catches_a_new_ungated_app(self):
+        """Discrimination proof without editing the gate: inject a brand-new HRMS
+        app into INSTALLED_APPS and confirm the guard flags it."""
+        new_installed = list(_dummy_settings_installed()) + ["payroll_v2_hrms"]
+        self.assertIn("payroll_v2_hrms", _ungated_apps(new_installed))
+        # An allowlisted or gated app in the same list is NOT flagged:
+        self.assertNotIn("recruitment", _ungated_apps(new_installed))
+        self.assertNotIn("payroll", _ungated_apps(new_installed))
+
+
+# --- drift-guard helpers -----------------------------------------------------
+
+# Apps that are legitimately reachable on the recruitment-only deploy:
+# recruitment itself, the load-bearing base/employee shell, and the horilla_*
+# infra + third-party libs. Anything installed and NOT here MUST be gated;
+# a new, unclassified app trips the drift guard (fail-closed).
+ALLOWED_UNGATED = frozenset(
+    {
+        "base",
+        "employee",
+        "recruitment",
+        "accessibility",
+        "horilla_auth",
+        "horilla_theme",
+        "horilla_audit",
+        "horilla_widgets",
+        "horilla_crumbs",
+        "horilla_documents",
+        "horilla_views",
+        "horilla_automations",
+        "horilla_api",
+        "horilla_dbtemplate",
+        "horilla_tour",
+        "horilla_ldap",  # LDAP config, mounts at root "" — infra, not an HRMS surface
+        "notifications",
+        "mathfilters",
+        "corsheaders",
+        "simple_history",
+        "django_filters",
+        "widget_tweaks",
+        "auditlog",
+        "django_apscheduler",
+        "rest_framework",
+        "rest_framework_simplejwt",
+        "drf_yasg",
+        "aida_customs",
+    }
+)
+
+
+def _is_reachable_allowlisted(app: str) -> bool:
+    return (
+        app in ALLOWED_UNGATED or app.startswith("django.") or app.startswith("allauth")
+    )
+
+
+def _is_gated(app: str) -> bool:
+    """True when ``app`` is gated — by leading segment or by /api/ path prefix."""
+    segment = middleware.FEATURE_APP_SEGMENTS.get(app)
+    if segment is not None and segment in middleware.BLOCKED_SEGMENTS:
+        return True
+    prefix = middleware.FEATURE_APP_PATH_PREFIXES.get(app)
+    return prefix is not None and prefix in middleware.BLOCKED_PATH_PREFIXES
+
+
+def _ungated_apps(installed) -> list:
+    """Installed apps that are neither allowlisted-reachable nor gated."""
+    return [
+        app
+        for app in installed
+        if not _is_reachable_allowlisted(app) and not _is_gated(app)
+    ]
+
+
+def _dummy_settings_installed():
+    from django.conf import settings
+
+    return settings.INSTALLED_APPS

@@ -54,6 +54,16 @@ FEATURE_APP_SEGMENTS = {
 # Leading path segments that are 404'd (single source of truth: the map above).
 BLOCKED_SEGMENTS = frozenset(FEATURE_APP_SEGMENTS.values())
 
+# A few HRMS-family apps mount under a shared /api/ prefix (their leading
+# segment is "api", shared with the load-bearing horilla_api), so they cannot
+# be gated by leading segment — they are gated by full path prefix instead.
+# Maps the app label -> its blocked path prefix, for the drift guard.
+FEATURE_APP_PATH_PREFIXES = {
+    "facedetection": "api/facedetection",
+    "geofencing": "api/geofencing",
+}
+BLOCKED_PATH_PREFIXES = tuple(FEATURE_APP_PATH_PREFIXES.values())
+
 
 def _leading_segment(path: str) -> str:
     """First path segment of ``path`` ("/payroll/x/" -> "payroll"), or ""."""
@@ -62,8 +72,14 @@ def _leading_segment(path: str) -> str:
 
 
 def is_blocked(path: str) -> bool:
-    """True when ``path``'s leading segment is a blocked HRMS feature app."""
-    return _leading_segment(path) in BLOCKED_SEGMENTS
+    """True when ``path`` is under a blocked HRMS feature-app prefix (either a
+    leading segment, or a full /api/ sub-prefix for the api-mounted helpers)."""
+    stripped = path.strip("/")
+    if _leading_segment(path) in BLOCKED_SEGMENTS:
+        return True
+    return any(
+        stripped == p or stripped.startswith(p + "/") for p in BLOCKED_PATH_PREFIXES
+    )
 
 
 class RecruitmentOnlyMiddleware:
