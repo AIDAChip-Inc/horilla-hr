@@ -82,3 +82,4 @@ coverage>=7.0
 
 # AIDAChip customs (aida_customs)
 icalendar==6.1.1  # F2 interview ICS invites
+django-allauth==65.11.0  # F3 Google Workspace SSO

@@ -5,7 +5,14 @@ Imported from horilla.settings.__init__ after base.py. Client overrides belong
 in local_settings.py (imported after this module) — do not import them here.
 """
 
-from .base import INSTALLED_APPS, MEDIA_ROOT, MEDIA_URL, MIDDLEWARE, env
+from .base import (
+    AUTHENTICATION_BACKENDS,
+    INSTALLED_APPS,
+    MEDIA_ROOT,
+    MEDIA_URL,
+    MIDDLEWARE,
+    env,
+)
 
 if env("AWS_ACCESS_KEY_ID", default=None):
     AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID")
@@ -46,4 +53,48 @@ SIDEBARS = ["recruitment"]
 #   (c) Land staff on the recruitment pipeline after login, never the HRMS home
 #       dashboard (which aggregates payroll/attendance/leave widgets).
 LOGIN_REDIRECT_URL = "/recruitment/pipeline/"
+
+# F3 — Google Workspace SSO via django-allauth, ALONGSIDE Horilla's native
+# CompanyScopedBackend (kept, so native /login and the superuser always work =
+# lockout safety). Enabled only when the Google client id is configured, so a
+# dev box without OAuth creds is unaffected.
+for _app in (
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
+):
+    if _app not in INSTALLED_APPS:
+        INSTALLED_APPS.append(_app)
+
+# allauth 65 requires its AccountMiddleware.
+if "allauth.account.middleware.AccountMiddleware" not in MIDDLEWARE:
+    MIDDLEWARE.append("allauth.account.middleware.AccountMiddleware")
+
+# Add the allauth backend; KEEP CompanyScopedBackend (native login + company
+# scoping). Django unions grants across backends, so native auth is unchanged.
+if "allauth.account.auth_backends.AuthenticationBackend" not in AUTHENTICATION_BACKENDS:
+    AUTHENTICATION_BACKENDS.append(
+        "allauth.account.auth_backends.AuthenticationBackend"
+    )
+
+# Staff domains allowed for SSO (fail-closed default: @aidachip.com only).
+ALLOWED_SSO_DOMAINS = env.list("ALLOWED_SSO_DOMAINS", default=["aidachip.com"])
+
+SOCIALACCOUNT_ADAPTER = "aida_customs.auth.adapter.AidaSocialAccountAdapter"
+ACCOUNT_ADAPTER = "aida_customs.auth.adapter.AidaAccountAdapter"
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        # hd is a UI hint only — the real gate is the adapter (fail-closed).
+        "AUTH_PARAMS": {"access_type": "online"},
+        "APPS": [
+            {
+                "client_id": env("GOOGLE_OAUTH_CLIENT_ID", default=""),
+                "secret": env("GOOGLE_OAUTH_SECRET", default=""),
+                "settings": {"hd": ALLOWED_SSO_DOMAINS[0]},
+            }
+        ],
+        "SCOPE": ["profile", "email"],
+    }
+}
 # ===== END AIDACHIP CUSTOMS =====
