@@ -52,7 +52,7 @@ clean: ## Clean up (removes volumes — data loss!)
 
 # Unit-test coverage program (feature/unit-test-coverage)
 # Smoke = Phases 0–3 first-party app minimum bar.
-SMOKE_LABELS ?= leave attendance base horilla_auth employee accessibility payroll horilla_api biometric asset recruitment onboarding offboarding pms project helpdesk report whatsapp facedetection geofencing horilla_documents horilla_automations horilla_backup horilla_crumbs horilla_ldap horilla_meet horilla_theme horilla_widgets horilla_views horilla_audit
+SMOKE_LABELS ?= leave attendance base horilla_auth employee accessibility payroll horilla_api biometric asset recruitment onboarding offboarding pms project helpdesk report whatsapp facedetection geofencing horilla_documents horilla_automations horilla_backup horilla_crumbs horilla_ldap horilla_meet horilla_theme horilla_widgets horilla_views horilla_audit aida_customs
 UNIT_LABELS ?= $(SMOKE_LABELS)
 
 test-smoke: ## Run CI smoke unit tests (min bar across first-party apps)
@@ -62,7 +62,7 @@ test-unit: ## Run unit-test labels (override UNIT_LABELS=...)
 	python manage.py test $(UNIT_LABELS) --verbosity=1
 
 COV_FAIL_UNDER ?= 5
-COV_SOURCE ?= leave,attendance,base,payroll,recruitment,report,horilla_auth,employee,accessibility,horilla_api
+COV_SOURCE ?= leave,attendance,base,payroll,recruitment,report,horilla_auth,employee,accessibility,horilla_api,aida_customs
 
 test-cov: ## Smoke suite under coverage (low fail-under floor)
 	python -m coverage erase
