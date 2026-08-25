@@ -9,7 +9,7 @@ from datetime import date, time
 
 from aida_customs.models import InterviewScorecard, Recommendation, ScorecardState
 from base.models import Company, Department, JobPosition
-from employee.models import Employee
+from employee.models import Employee, EmployeeWorkInformation
 from horilla_auth.models import HorillaUser
 from recruitment.models import Candidate, InterviewSchedule, Recruitment
 
@@ -41,13 +41,26 @@ def make_employee(company=None, is_superuser=False, email=None):
     if is_superuser:
         user.is_superuser = True
         user.save(update_fields=["is_superuser"])
-    return Employee.objects.create(
+    employee = Employee.objects.create(
         employee_user_id=user,
         employee_first_name=f"Emp{n}",
         employee_last_name="T",
         email=email,
         phone=f"+1000000{n:04d}",
     )
+    # Give the employee a work-info company so get_company() resolves the tenant
+    # co-key (the visibility gate keys on the VIEWER's company, not the object).
+    # Horilla may auto-create a work-info row, so update the existing one.
+    if company is not None:
+        wi = EmployeeWorkInformation.objects.filter(employee_id=employee).first()
+        if wi is None:
+            wi = EmployeeWorkInformation(employee_id=employee)
+        wi.company_id = company
+        wi.save()
+        # Re-fetch so the instance's cached reverse work-info relation reflects
+        # the company we just set (get_company() reads self.employee_work_info).
+        employee = Employee.objects.get(pk=employee.pk)
+    return employee
 
 
 def make_job_position(company):

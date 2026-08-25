@@ -81,27 +81,27 @@ class BlindScorecardTests(TestCase):
         self.assertNotIn(self.B_card, visible)  # still blind
         # KILL-NOTE: drop submitted_at__isnull=False from the .exists() -> RED.
 
-    def test_tenant_isolation_company_b_cannot_be_seen(self):
-        # A viewer resolved into company A can never see a company-B scorecard.
+    def test_tenant_isolation_company_id_filter_is_load_bearing(self):
+        # The company_id filter must be genuinely load-bearing: a foreign-company
+        # scorecard on the SAME interview must be excluded because the viewer is
+        # in company A, NOT merely because it is on a different interview. So
+        # deleting the company_id filter (keyed on the viewer) turns this RED.
         other_co = f.make_company("OTHER")
-        other_rec = f.make_recruitment(other_co)
-        other_cand = f.make_candidate(other_rec)
-        mgr_b = f.make_employee(other_co)
-        other_rec.recruitment_managers.add(mgr_b)
-        other_iv = f.make_interview(other_cand, interviewers=[mgr_b])
+        outsider = f.make_employee(other_co)  # belongs to company B
         leaked = f.make_scorecard(
-            other_iv,
-            mgr_b,
-            other_co,
+            self.interview,  # SAME interview as A/B
+            outsider,
+            other_co,  # but company_id = company B
             state=ScorecardState.SUBMITTED,
             feedback="COMPANY_B_SECRET",
             submitted_at=timezone.now(),
         )
-        # Manager of company A over their own interview never sees company B.
-        mgr_a = f.make_employee(self.company)
-        self.rec.recruitment_managers.add(mgr_a)
-        visible = visible_scorecards(viewer=mgr_a, interview=self.interview)
+        # A is in company A; after A submits, the blind gate opens — but the
+        # company-B row must still never appear (it is not A's tenant).
+        submit_scorecard(self.A, self.interview)
+        visible = visible_scorecards(viewer=self.A, interview=self.interview)
         self.assertNotIn(leaked, visible)
-        # KILL-NOTE: drop company_id from the base filter -> cross-tenant -> RED
-        # (here the query is scoped to self.interview so the co-key guards the
-        # has_finalized_for path; asserts the company filter stays present).
+        self.assertNotIn("COMPANY_B_SECRET", [s.feedback for s in visible])
+        # KILL-NOTE: replace company_id=viewer_company with no company filter (or
+        # key it on the interview's own company) -> the company-B row on this
+        # same interview appears -> RED.

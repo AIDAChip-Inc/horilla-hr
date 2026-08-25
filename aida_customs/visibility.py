@@ -39,15 +39,20 @@ class Role(Enum):
 
 
 # ----------------------------------------------------------------------------
-# Tenant co-keys (server-resolved, never from client input)
+# Tenant co-key (server-resolved from the VIEWER, never from the accessed object
+# or client input). Keying the read filter on the viewer's own company is
+# defense-in-depth: even if a scorecard/interview row is mis-linked to another
+# company by a data bug, a viewer can only ever see rows in THEIR company.
 # ----------------------------------------------------------------------------
 
 
-def _company_for_interview(interview):
-    return interview.candidate_id.recruitment_id.company_id
+def _viewer_company(viewer):
+    """The viewer's company (employee work-info). None -> deny (fail closed)."""
+    return viewer.get_company() if viewer is not None else None
 
 
 def _company_for_candidate(candidate):
+    """Tenant a NEW discussion comment is stored under (the candidate's own)."""
     return candidate.recruitment_id.company_id
 
 
@@ -101,9 +106,12 @@ def resolve_role_for_candidate(viewer, candidate) -> Role:
 
 def visible_scorecards(*, viewer, interview) -> QuerySet:
     """Scorecards ``viewer`` may see for ``interview``. Default-deny."""
+    viewer_company = _viewer_company(viewer)
+    if viewer_company is None:
+        return InterviewScorecard.objects.none()  # no company -> fail closed
     base = InterviewScorecard.objects.filter(
         interview=interview,
-        company_id=_company_for_interview(interview),
+        company_id=viewer_company,  # keyed on the viewer, not the object
     )
     role = resolve_role(viewer, interview)
     if role == Role.NONE:
@@ -125,12 +133,15 @@ def visible_scorecards(*, viewer, interview) -> QuerySet:
 def has_finalized_for(viewer, candidate) -> bool:
     """True once ``viewer`` has SUBMITTED a scorecard on any of this candidate's
     interviews they are an interviewer on. Both state fields required."""
+    viewer_company = _viewer_company(viewer)
+    if viewer_company is None:
+        return False  # no company -> fail closed
     return InterviewScorecard.objects.filter(
         interviewer=viewer,
         interview__candidate_id=candidate,
         state=ScorecardState.SUBMITTED,
         submitted_at__isnull=False,
-        company_id=_company_for_candidate(candidate),
+        company_id=viewer_company,  # keyed on the viewer, not the object
     ).exists()
 
 
@@ -146,8 +157,11 @@ def can_access_discussion(*, viewer, candidate) -> bool:
 def visible_discussion(*, viewer, candidate) -> QuerySet:
     if not can_access_discussion(viewer=viewer, candidate=candidate):
         return CandidateDiscussionComment.objects.none()  # read blocked -> empty
+    viewer_company = _viewer_company(viewer)
+    if viewer_company is None:
+        return CandidateDiscussionComment.objects.none()  # fail closed
     return CandidateDiscussionComment.objects.filter(
-        candidate=candidate, company_id=_company_for_candidate(candidate)
+        candidate=candidate, company_id=viewer_company  # keyed on the viewer
     )
 
 
