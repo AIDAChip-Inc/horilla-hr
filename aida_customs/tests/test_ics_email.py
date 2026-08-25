@@ -56,6 +56,28 @@ class IcsEmailTests(TestCase):
         # datetime.now()) -> DTSTART assertion RED. Drop msg.attach(...) ->
         # _ics_attachment raises -> RED.
 
+    def test_no_candidate_pii_in_email_body_only_in_ics(self):
+        # Amin: EmailLog logs subject+body (untenanted, no retention) but NOT
+        # the attachment. Candidate name / interview date must appear ONLY in
+        # the .ics, never in the logged subject/body.
+        mail.outbox = []
+        interview = f.make_interview(self.cand, interviewers=[self.A])
+        msg = mail.outbox[-1]
+        name = self.cand.name
+        iso_date = str(interview.interview_date)
+
+        # Logged surfaces carry NO candidate PII.
+        self.assertNotIn(name, msg.subject)
+        self.assertNotIn(name, msg.body)
+        self.assertNotIn(iso_date, msg.subject)
+        self.assertNotIn(iso_date, msg.body)
+
+        # The attachment (not logged) still carries the full details.
+        ics_text = _ics_attachment(msg).decode()
+        self.assertIn(name, ics_text)
+        # KILL-NOTE: put the candidate name/date back in the subject or body ->
+        # the assertNotIn assertions go RED (PII would re-enter EmailLog).
+
     def test_marking_completed_does_not_resend(self):
         interview = f.make_interview(self.cand, interviewers=[self.A])  # initial invite
         mail.outbox = []

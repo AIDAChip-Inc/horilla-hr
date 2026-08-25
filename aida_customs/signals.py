@@ -82,12 +82,16 @@ def _send_invite(interview) -> None:
         return
     try:
         ics = build_ics(interview)
+        # NEUTRAL subject/body only. Horilla's ConfiguredEmailBackend logs every
+        # email subject+body to EmailLog (untenanted: company_id NULL, no
+        # retention), so candidate name / interview datetime must NOT appear
+        # here. The candidate name and slot live ONLY in the .ics attachment,
+        # which is NOT logged — interviewers still receive full details.
         msg = EmailMessage(
-            subject=f"Interview scheduled: {interview.candidate_id.name}",
+            subject="Interview scheduled",
             body=(
-                f"An interview has been scheduled for "
-                f"{interview.candidate_id.name} on {interview.interview_date} "
-                f"at {interview.interview_time}. The calendar invite is attached."
+                "An interview has been scheduled. The details are in the "
+                "attached calendar invite."
             ),
             to=recipients,
         )
