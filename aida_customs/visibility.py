@@ -42,6 +42,7 @@ class Role(Enum):
 # Tenant co-keys (server-resolved, never from client input)
 # ----------------------------------------------------------------------------
 
+
 def _company_for_interview(interview):
     return interview.candidate_id.recruitment_id.company_id
 
@@ -53,6 +54,7 @@ def _company_for_candidate(candidate):
 # ----------------------------------------------------------------------------
 # Role resolution — default-deny
 # ----------------------------------------------------------------------------
+
 
 def _is_superuser(viewer) -> bool:
     user = getattr(viewer, "employee_user_id", None)
@@ -96,6 +98,7 @@ def resolve_role_for_candidate(viewer, candidate) -> Role:
 # Scorecard gate
 # ----------------------------------------------------------------------------
 
+
 def visible_scorecards(*, viewer, interview) -> QuerySet:
     """Scorecards ``viewer`` may see for ``interview``. Default-deny."""
     base = InterviewScorecard.objects.filter(
@@ -109,9 +112,7 @@ def visible_scorecards(*, viewer, interview) -> QuerySet:
         return base  # sees all, never gated
     # INTERVIEWER: only own until own is submitted.
     own = base.filter(interviewer=viewer)
-    if own.filter(
-        state=ScorecardState.SUBMITTED, submitted_at__isnull=False
-    ).exists():
+    if own.filter(state=ScorecardState.SUBMITTED, submitted_at__isnull=False).exists():
         return base
     return own
 
@@ -119,6 +120,7 @@ def visible_scorecards(*, viewer, interview) -> QuerySet:
 # ----------------------------------------------------------------------------
 # Discussion gate — the SAME switch, gates BOTH read and post
 # ----------------------------------------------------------------------------
+
 
 def has_finalized_for(viewer, candidate) -> bool:
     """True once ``viewer`` has SUBMITTED a scorecard on any of this candidate's

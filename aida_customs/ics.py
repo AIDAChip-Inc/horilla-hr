@@ -27,9 +27,7 @@ def build_ics(interview, *, organizer_email: str | None = None) -> bytes:
     if Calendar is None:  # dependency missing -> fail loud
         raise RuntimeError("icalendar is required for interview ICS emails")
 
-    start_naive = datetime.combine(
-        interview.interview_date, interview.interview_time
-    )
+    start_naive = datetime.combine(interview.interview_date, interview.interview_time)
     tz = timezone.get_current_timezone()
     start = timezone.make_aware(start_naive, tz)
     end = start + DEFAULT_DURATION

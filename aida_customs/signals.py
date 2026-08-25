@@ -19,9 +19,8 @@ from django.core.mail import EmailMessage
 from django.db.models.signals import m2m_changed, post_save, pre_save
 from django.dispatch import receiver
 
-from recruitment.models import InterviewSchedule
-
 from aida_customs.ics import build_ics
+from recruitment.models import InterviewSchedule
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +31,11 @@ def _snapshot_schedule(sender, instance, **kwargs):
     if not instance.pk:
         instance._aida_old_slot = None
         return
-    old = sender.objects.filter(pk=instance.pk).values(
-        "interview_date", "interview_time"
-    ).first()
+    old = (
+        sender.objects.filter(pk=instance.pk)
+        .values("interview_date", "interview_time")
+        .first()
+    )
     instance._aida_old_slot = (
         (old["interview_date"], old["interview_time"]) if old else None
     )

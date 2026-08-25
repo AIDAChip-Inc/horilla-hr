@@ -12,9 +12,7 @@ def submit_scorecard(interviewer, interview) -> InterviewScorecard:
     default (un-submit is admin-only — founder decision, plan §10(c)); this
     helper never moves a row back to DRAFT.
     """
-    card = InterviewScorecard.objects.get(
-        interview=interview, interviewer=interviewer
-    )
+    card = InterviewScorecard.objects.get(interview=interview, interviewer=interviewer)
     if card.state != ScorecardState.SUBMITTED:
         card.state = ScorecardState.SUBMITTED
         card.submitted_at = timezone.now()

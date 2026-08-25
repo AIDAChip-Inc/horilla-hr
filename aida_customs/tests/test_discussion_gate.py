@@ -29,8 +29,11 @@ class DiscussionGateTests(TestCase):
         self.interview = f.make_interview(self.cand, interviewers=[self.A, self.B])
         # B has finalized (submitted) and posted a comment.
         f.make_scorecard(
-            self.interview, self.B, self.company,
-            state=ScorecardState.SUBMITTED, submitted_at=timezone.now(),
+            self.interview,
+            self.B,
+            self.company,
+            state=ScorecardState.SUBMITTED,
+            submitted_at=timezone.now(),
         )
         # A has a draft only -> not finalized.
         f.make_scorecard(
@@ -66,7 +69,9 @@ class DiscussionGateTests(TestCase):
         mgr = f.make_employee(self.company)
         self.rec.recruitment_managers.add(mgr)
         self.assertTrue(can_access_discussion(viewer=mgr, candidate=self.cand))
-        self.assertIn(self.B_comment, visible_discussion(viewer=mgr, candidate=self.cand))
+        self.assertIn(
+            self.B_comment, visible_discussion(viewer=mgr, candidate=self.cand)
+        )
         self.assertIsNotNone(
             post_comment(author=mgr, candidate=self.cand, body="mgr note").pk
         )

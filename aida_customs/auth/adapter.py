@@ -61,9 +61,7 @@ class AidaSocialAccountAdapter(DefaultSocialAccountAdapter):
         existing = existing_user_for(email)
         if existing is None:
             logger.warning("SSO rejected: no Employee/user for %r", email)
-            raise PermissionDenied(
-                "No AIDAChip staff account exists for this email."
-            )
+            raise PermissionDenied("No AIDAChip staff account exists for this email.")
 
         # Link the Google identity to the existing staff user (no duplicate).
         if not sociallogin.is_existing:

@@ -45,7 +45,9 @@ class SsoDomainGateTests(TestCase):
 
     def test_non_aidachip_google_login_rejected(self):
         with self.assertRaises(PermissionDenied):
-            self.adapter.pre_social_login(_request(), _sociallogin("attacker@gmail.com"))
+            self.adapter.pre_social_login(
+                _request(), _sociallogin("attacker@gmail.com")
+            )
         self.assertEqual(
             get_user_model().objects.filter(email="attacker@gmail.com").count(), 0
         )
@@ -64,7 +66,9 @@ class SsoDomainGateTests(TestCase):
     def test_aidachip_login_without_employee_rejected(self):
         # No Employee/user exists for this @aidachip.com address.
         with self.assertRaises(PermissionDenied):
-            self.adapter.pre_social_login(_request(), _sociallogin("ghost@aidachip.com"))
+            self.adapter.pre_social_login(
+                _request(), _sociallogin("ghost@aidachip.com")
+            )
         # KILL-NOTE: drop the existing_user_for None check -> auto-provision
         # allowed -> no raise -> RED.
 

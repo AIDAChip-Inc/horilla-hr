@@ -17,10 +17,9 @@ class AidaCustomsConfig(AppConfig):
     def ready(self):
         from django.urls import include, path
 
-        from horilla.urls import urlpatterns
-
         # F2: interview-scheduled -> ICS email signal.
         from aida_customs import signals  # noqa: F401
+        from horilla.urls import urlpatterns
 
         # Our own routes (F1 discussion/scorecards views).
         urlpatterns.append(path("aida/", include("aida_customs.urls")))

@@ -28,9 +28,13 @@ class BlindScorecardTests(TestCase):
         self.interview = f.make_interview(self.cand, interviewers=[self.A, self.B])
         # B has submitted a real review; A has only a draft.
         self.B_card = f.make_scorecard(
-            self.interview, self.B, self.company,
-            state=ScorecardState.SUBMITTED, feedback="B_SECRET_FEEDBACK",
-            score=5, submitted_at=timezone.now(),
+            self.interview,
+            self.B,
+            self.company,
+            state=ScorecardState.SUBMITTED,
+            feedback="B_SECRET_FEEDBACK",
+            score=5,
+            submitted_at=timezone.now(),
         )
         self.A_card = f.make_scorecard(
             self.interview, self.A, self.company, state=ScorecardState.DRAFT
@@ -86,8 +90,12 @@ class BlindScorecardTests(TestCase):
         other_rec.recruitment_managers.add(mgr_b)
         other_iv = f.make_interview(other_cand, interviewers=[mgr_b])
         leaked = f.make_scorecard(
-            other_iv, mgr_b, other_co, state=ScorecardState.SUBMITTED,
-            feedback="COMPANY_B_SECRET", submitted_at=timezone.now(),
+            other_iv,
+            mgr_b,
+            other_co,
+            state=ScorecardState.SUBMITTED,
+            feedback="COMPANY_B_SECRET",
+            submitted_at=timezone.now(),
         )
         # Manager of company A over their own interview never sees company B.
         mgr_a = f.make_employee(self.company)

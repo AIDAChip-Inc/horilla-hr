@@ -7,17 +7,11 @@ relations, not mocks.
 
 from datetime import date, time
 
-from horilla_auth.models import HorillaUser
-
+from aida_customs.models import InterviewScorecard, Recommendation, ScorecardState
 from base.models import Company, Department, JobPosition
 from employee.models import Employee
+from horilla_auth.models import HorillaUser
 from recruitment.models import Candidate, InterviewSchedule, Recruitment
-
-from aida_customs.models import (
-    InterviewScorecard,
-    Recommendation,
-    ScorecardState,
-)
 
 _counter = {"n": 0}
 

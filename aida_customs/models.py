@@ -47,9 +47,7 @@ class InterviewScorecard(HorillaModel):
         validators=[MinValueValidator(0), MaxValueValidator(5)]
     )
     feedback = models.TextField()  # the narrative the blind gate protects
-    recommendation = models.CharField(
-        max_length=16, choices=Recommendation.choices
-    )
+    recommendation = models.CharField(max_length=16, choices=Recommendation.choices)
     state = models.CharField(
         max_length=16,
         choices=ScorecardState.choices,

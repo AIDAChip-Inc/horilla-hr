@@ -25,9 +25,7 @@ def _employee(request):
 @require_http_methods(["POST"])
 def submit_scorecard_view(request, scorecard_id):
     viewer = _employee(request)
-    card = get_object_or_404(
-        InterviewScorecard, pk=scorecard_id, interviewer=viewer
-    )
+    card = get_object_or_404(InterviewScorecard, pk=scorecard_id, interviewer=viewer)
     submit_scorecard(viewer, card.interview)
     return JsonResponse({"status": "submitted", "scorecard_id": card.pk})
 
@@ -38,7 +36,9 @@ def scorecards_view(request, interview_id):
     from recruitment.models import InterviewSchedule
 
     interview = get_object_or_404(InterviewSchedule, pk=interview_id)
-    cards = visibility.visible_scorecards(viewer=_employee(request), interview=interview)
+    cards = visibility.visible_scorecards(
+        viewer=_employee(request), interview=interview
+    )
     return JsonResponse(
         {
             "scorecards": [
